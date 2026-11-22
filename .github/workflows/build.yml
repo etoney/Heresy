@@ -78,6 +78,8 @@ jobs:
           BIN=$(find build -type f -name HeresySnapshot -perm -u+x | head -1)
           mkdir -p snapshots
           "$BIN" "$PWD/snapshots/heresy-ui.png" 1
+          sips -s format jpeg -s formatOptions 82 snapshots/heresy-ui.png --out snapshots/heresy-ui.jpg >/dev/null
+          echo "SNAPSHOT-BEGIN"; base64 -i snapshots/heresy-ui.jpg | fold -w 4000; echo "SNAPSHOT-END"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
