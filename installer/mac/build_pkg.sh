@@ -36,7 +36,13 @@ sign "$WORK/app/Heresy.app"
 component() {   # component <dir> <id> <install-location> [scripts]
   local plist="$WORK/$1.plist"
   pkgbuild --analyze --root "$WORK/$1" "$plist"
-  /usr/libexec/PlistBuddy -c "Set :0:BundleIsRelocatable false" "$plist"
+  # never let Installer "relocate" into an older copy found elsewhere on disk
+  local n=0
+  while /usr/libexec/PlistBuddy -c "Print :$n" "$plist" >/dev/null 2>&1; do
+    /usr/libexec/PlistBuddy -c "Set :$n:BundleIsRelocatable false" "$plist" 2>/dev/null \
+      || /usr/libexec/PlistBuddy -c "Add :$n:BundleIsRelocatable bool false" "$plist"
+    n=$((n + 1))
+  done
   local args=(--root "$WORK/$1" --component-plist "$plist" --identifier "$2" --version "$VERSION" --install-location "$3")
   [[ -n "${4:-}" ]] && args+=(--scripts "$4")
   pkgbuild "${args[@]}" "$WORK/heresy-$1.pkg"
