@@ -37,7 +37,7 @@ jobs:
 
   mac:
     name: macOS installer (AU, VST3, app)
-    runs-on: macos-14
+    runs-on: macos-latest
     env:
       MACOS_CERT_APP_P12: ${{ secrets.MACOS_CERT_APP_P12 }}
       MACOS_CERT_INSTALLER_P12: ${{ secrets.MACOS_CERT_INSTALLER_P12 }}
@@ -88,7 +88,7 @@ jobs:
         shell: bash
         run: echo "version=$(sed -n 's/^project(Heresy VERSION \([0-9.]*\).*/\1/p' CMakeLists.txt)" >> "$GITHUB_OUTPUT"
       - name: Configure
-        run: cmake -B build -G "Visual Studio 17 2022" -A x64
+        run: cmake -B build -A x64
       - name: Build
         run: cmake --build build --config Release --target Heresy_VST3 Heresy_Standalone
       - name: Build installer
