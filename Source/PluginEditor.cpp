@@ -846,7 +846,7 @@ HeresyEditor::HeresyEditor (HeresyProcessor& p)
     keyboard.setAvailableRange (24, 96);
     keyboard.setScrollButtonsVisible (false);
     keyboard.setWantsKeyboardFocus (false);
-    keyboard.setColour (juce::MidiKeyboardComponent::whiteNoteColourId, colours::bone);
+    keyboard.setColour (juce::MidiKeyboardComponent::whiteNoteColourId, juce::Colour (0xffc4b39a));
     keyboard.setColour (juce::MidiKeyboardComponent::blackNoteColourId, juce::Colour (0xff161111));
     keyboard.setColour (juce::MidiKeyboardComponent::keySeparatorLineColourId, juce::Colour (0x66000000));
     keyboard.setColour (juce::MidiKeyboardComponent::mouseOverKeyOverlayColourId, colours::red.withAlpha (0.25f));
