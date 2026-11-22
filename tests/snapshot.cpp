@@ -13,7 +13,7 @@ int main (int argc, char** argv)
     proc->setCurrentProgram (preset);
 
     std::unique_ptr<juce::AudioProcessorEditor> editor (proc->createEditor());
-    editor->setSize (1200, 830);
+    editor->setSize (1200, 862);
     auto img = editor->createComponentSnapshot (editor->getLocalBounds(), true, 1.0f);
 
     out.deleteFile();

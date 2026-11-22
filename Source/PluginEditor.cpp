@@ -135,7 +135,7 @@ void LookAndFeel::drawRotarySlider (juce::Graphics& g, int x, int y, int w, int 
     }
 
     // value arc
-    const float arcR = r - 4.6f * big, track = 2.6f * big;
+    const float arcR = r - 3.9f * big, track = 2.4f * big;
     juce::Path bgArc, valArc;
     bgArc.addCentredArc (c.x, c.y, arcR, arcR, 0.0f, start, end, true);
     valArc.addCentredArc (c.x, c.y, arcR, arcR, 0.0f, start, angle, true);
@@ -147,7 +147,7 @@ void LookAndFeel::drawRotarySlider (juce::Graphics& g, int x, int y, int w, int 
     g.strokePath (valArc, juce::PathStrokeType (track));
 
     // rusty knob body
-    const float br = r - 8.0f * big;
+    const float br = r - 6.6f * big;
     g.setColour (juce::Colours::black.withAlpha (0.65f));
     g.fillEllipse (c.x - br + 1, c.y - br + 2.5f, br * 2, br * 2);
     g.saveState();
@@ -247,8 +247,8 @@ Knob::Knob (juce::AudioProcessorValueTreeState& s, int i, bool b) : index (i), b
 void Knob::resized()
 {
     auto r = getLocalBounds();
-    r.removeFromTop (big ? 22 : 14);
-    r.removeFromBottom (big ? 24 : 18);
+    r.removeFromTop (big ? 22 : 13);
+    r.removeFromBottom (big ? 24 : 17);
     const int s = std::min (r.getWidth(), r.getHeight());
     slider.setBounds (r.withSizeKeepingCentre (s, s));
 }
@@ -256,8 +256,8 @@ void Knob::resized()
 void Knob::paint (juce::Graphics& g)
 {
     auto r = getLocalBounds();
-    auto top = r.removeFromTop (big ? 22 : 14);
-    auto bottom = r.removeFromBottom (big ? 24 : 18);
+    auto top = r.removeFromTop (big ? 22 : 13);
+    auto bottom = r.removeFromBottom (big ? 24 : 17);
     g.setColour (big ? colours::bone : juce::Colour (0xffc9bcb0));
     drawSpaced (g, juce::String (params()[(size_t) index].label).toUpperCase(), Fonts::get().sans (big ? 15.0f : 11.0f, big),
                 top, juce::Justification::centred, big ? 0.1f : 0.08f);
@@ -304,7 +304,7 @@ static void paintPanel (juce::Graphics& g, juce::Rectangle<float> r, const juce:
     using namespace colours;
     g.setColour (juce::Colours::black.withAlpha (0.45f));
     g.fillRect (r.translated (2, 3));
-    g.setColour (juce::Colour (0xa8140b07));
+    g.setColour (juce::Colour (0x70120a06));
     g.fillRect (r);
     // bevel: lit top/left, shadowed bottom/right
     g.setColour (juce::Colour (0x1affdcc0));
@@ -430,8 +430,8 @@ void Pad::paint (juce::Graphics& g)
     paintPanel (g, getLocalBounds().toFloat(), spec.name);
     auto f = field();
 
-    g.setColour (juce::Colour (0xff080606));
-    g.fillRoundedRectangle (f, 4.0f);
+    g.setColour (juce::Colour (0xd8080504));
+    g.fillRoundedRectangle (f, 3.0f);
     g.setColour (juce::Colour (0xff201816));
     for (int i = 1; i < 6; ++i)
     {
@@ -745,7 +745,7 @@ static juce::Image makeTexture (int w, int h)
     static juce::Image cached;
     if (cached.isValid() && cached.getWidth() == w && cached.getHeight() == h) return cached;
 
-    auto img = makeRust (w, h, 1337, 26.0f, 0.95f).convertedToFormat (juce::Image::ARGB);
+    auto img = makeRust (w, h, 1337, 26.0f, 1.12f).convertedToFormat (juce::Image::ARGB);
     juce::Graphics g (img);
     juce::Random r (666);
     // scratches
