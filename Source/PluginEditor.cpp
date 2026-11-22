@@ -381,6 +381,272 @@ void Pad::paint (juce::Graphics& g)
     drawSpaced (g, juce::String::fromUTF8 ("Y \xc2\xb7 ") + spec.yLabel().toUpperCase(), Fonts::get().label (12.5f), lab, juce::Justification::centredRight, 0.1f);
 }
 
+// ================================================================ header
+static void paintRivet (juce::Graphics& g, float x, float y, float r)
+{
+    juce::ColourGradient rv (juce::Colour (0xffd8c3a2), x - r * 0.4f, y - r * 0.4f, juce::Colour (0xff4c3828), x + r, y + r, true);
+    g.setGradientFill (rv);
+    g.fillEllipse (x - r, y - r, r * 2, r * 2);
+}
+
+static void paintBezel (juce::Graphics& g, juce::Rectangle<float> r)
+{
+    g.setColour (juce::Colours::black.withAlpha (0.5f));
+    g.fillRoundedRectangle (r.translated (0, 3), 5.0f);
+    juce::ColourGradient metal (juce::Colour (0xff4a3a30), r.getX(), r.getY(), juce::Colour (0xff1a110c), r.getRight(), r.getBottom(), false);
+    g.setGradientFill (metal);
+    g.fillRoundedRectangle (r, 5.0f);
+    g.setColour (juce::Colour (0xff0d0806));
+    g.drawRoundedRectangle (r.reduced (0.5f), 5.0f, 1.0f);
+    const float i = 5.0f;
+    for (auto p : { r.getTopLeft(), r.getTopRight(), r.getBottomLeft(), r.getBottomRight() })
+        paintRivet (g, p.x + (p.x < r.getCentreX() ? i : -i), p.y + (p.y < r.getCentreY() ? i : -i), 3.2f);
+}
+
+Header::Header()
+{
+    setInterceptsMouseClicks (false, false);
+    startTimerHz (30);
+}
+
+void Header::timerCallback()
+{
+    phase += 1.0f / 30.0f;
+    repaint (screenR.toNearestInt().expanded (2));
+}
+
+void Header::resized()
+{
+    // title as a path, so it can be textured and dripped like the other Castle Danger plugins
+    juce::GlyphArrangement ga;
+    ga.addLineOfText (Fonts::get().title (100.0f), "HERESY", 0, 0);
+    titlePath.clear();
+    ga.createPath (titlePath);
+    titlePath.applyTransform (titlePath.getTransformToScaleToFit (titleR, true, juce::Justification::centredLeft));
+
+    drips.clear();
+    juce::Random r (31);
+    const auto tb = titlePath.getBounds();
+    int made = 0;
+    for (int tries = 0; tries < 400 && made < 11; ++tries)
+    {
+        const float x = tb.getX() + r.nextFloat() * tb.getWidth();
+        const float y = tb.getBottom() - 2.0f;
+        if (! titlePath.contains (x, y - 1.0f)) continue;
+        bool clash = false;
+        for (auto& d : drips) if (std::abs (d.getBounds().getCentreX() - x) < 14.0f) clash = true;
+        if (clash) continue;
+        const float w = 2.0f + r.nextFloat() * 2.2f, len = 5.0f + r.nextFloat() * r.nextFloat() * 22.0f;
+        juce::Path d;
+        d.startNewSubPath (x - w, y - 3.0f);
+        d.cubicTo (x - w, y + len * 0.5f, x - w * 0.45f, y + len * 0.8f, x - w * 0.45f, y + len);
+        d.addCentredArc (x, y + len, w * 0.45f + 0.6f, w * 0.45f + 0.6f, 0.0f, -juce::MathConstants<float>::halfPi,
+                         juce::MathConstants<float>::halfPi, false);
+        d.cubicTo (x + w * 0.45f, y + len * 0.8f, x + w, y + len * 0.5f, x + w, y - 3.0f);
+        d.closeSubPath();
+        d.addEllipse (x - w * 0.5f, y + len + 4.0f + r.nextFloat() * 5.0f, w, w * 1.35f);   // falling drop
+        drips.push_back (d);
+        ++made;
+    }
+}
+
+void Header::paintScreen (juce::Graphics& g, juce::Rectangle<float> r)
+{
+    paintBezel (g, r);
+    auto s = r.reduced (9.0f);
+    g.setColour (juce::Colour (0xff030202));
+    g.fillRoundedRectangle (s, 3.0f);
+
+    g.saveState();
+    g.reduceClipRegion (s.toNearestInt());
+    const auto c = s.getCentre();
+    const float pulse = 0.5f + 0.5f * std::sin (phase * 2.1f);
+
+    juce::ColourGradient bg (juce::Colour (0xff5a0d08).withAlpha (0.75f + 0.2f * pulse), c.x, c.y,
+                             juce::Colours::transparentBlack, c.x + s.getWidth() * 0.45f, c.y, true);
+    g.setGradientFill (bg);
+    g.fillRect (s);
+
+    const float R = s.getHeight() * 0.44f;
+    g.setColour (juce::Colour (0xffe0401f).withAlpha (0.85f));
+    g.drawEllipse (c.x - R, c.y - R, R * 2, R * 2, 1.4f);
+    g.drawEllipse (c.x - R * 0.7f, c.y - R * 0.7f, R * 1.4f, R * 1.4f, 1.0f);
+
+    // runes turning slowly between the rings
+    g.setColour (juce::Colour (0xffff6a2a));
+    for (int i = 0; i < 14; ++i)
+    {
+        const float a = phase * 0.25f + (float) i * juce::MathConstants<float>::twoPi / 14.0f;
+        const auto p = c.getPointOnCircumference (R * 0.85f, a);
+        juce::Path rune;
+        rune.startNewSubPath (0, -3.5f); rune.lineTo (0, 3.5f);
+        rune.startNewSubPath (0, -3.5f); rune.lineTo ((i % 3 == 0 ? -2.5f : 2.5f), -1.0f);
+        if (i % 2) { rune.startNewSubPath (0, 0.5f); rune.lineTo (2.5f, 3.0f); }
+        g.strokePath (rune, juce::PathStrokeType (1.0f), juce::AffineTransform::rotation (a).translated (p));
+    }
+
+    // inverted cross and eye
+    juce::Path cross;
+    cross.startNewSubPath (c.x, c.y - R * 0.62f); cross.lineTo (c.x, c.y + R * 0.62f);
+    cross.startNewSubPath (c.x - R * 0.32f, c.y + R * 0.3f); cross.lineTo (c.x + R * 0.32f, c.y + R * 0.3f);
+    g.setColour (juce::Colour (0xffff4a24).withAlpha (0.9f));
+    g.strokePath (cross, juce::PathStrokeType (2.2f));
+
+    juce::ColourGradient core (juce::Colour (0xfffff1c4), c.x, c.y, juce::Colour (0x00660000), c.x + R * 0.45f, c.y, true);
+    core.addColour (0.3, juce::Colour (0xffff9a3a));
+    core.addColour (0.65, juce::Colour (0x8cc3200f));
+    g.setGradientFill (core);
+    const float cr = R * (0.36f + 0.05f * pulse);
+    g.fillEllipse (c.x - cr, c.y - cr, cr * 2, cr * 2);
+    juce::Path eye;
+    const float ew = R * 0.3f, eh = R * 0.17f;
+    eye.startNewSubPath (c.x - ew, c.y);
+    eye.quadraticTo (c.x, c.y - eh, c.x + ew, c.y);
+    eye.quadraticTo (c.x, c.y + eh, c.x - ew, c.y);
+    eye.closeSubPath();
+    g.setColour (juce::Colour (0xff1a0201));
+    g.fillPath (eye);
+    const float look = std::sin (phase * 0.7f) * ew * 0.35f;
+    g.setColour (juce::Colour (0xffffcf6e));
+    g.fillEllipse (c.x + look - 1.4f, c.y - eh * 0.8f, 2.8f, eh * 1.6f);
+
+    // scanlines
+    g.setColour (juce::Colours::black.withAlpha (0.22f));
+    for (float y = s.getY(); y < s.getBottom(); y += 3.0f) g.drawHorizontalLine ((int) y, s.getX(), s.getRight());
+    g.restoreState();
+}
+
+void Header::paintTitle (juce::Graphics& g)
+{
+    const auto tb = titlePath.getBounds();
+    g.setColour (juce::Colour (0xff9a2715));
+    for (auto& d : drips) g.fillPath (d);
+
+    g.setColour (juce::Colours::black.withAlpha (0.55f));
+    g.fillPath (titlePath, juce::AffineTransform::translation (2.0f, 3.0f));
+
+    juce::ColourGradient grad (juce::Colour (0xffef6a45), 0, tb.getY(), juce::Colour (0xff7e1b0f), 0, tb.getBottom(), false);
+    grad.addColour (0.5, juce::Colour (0xffc63c23));
+    g.saveState();
+    g.reduceClipRegion (titlePath);
+    g.setGradientFill (grad);
+    g.fillRect (tb);
+    // grime and chips
+    juce::Random r (7);
+    for (int i = 0; i < 700; ++i)
+    {
+        const float x = tb.getX() + r.nextFloat() * tb.getWidth(), y = tb.getY() + r.nextFloat() * tb.getHeight();
+        const float sz = 0.6f + r.nextFloat() * r.nextFloat() * 3.2f;
+        g.setColour (juce::Colour (0xff1c0503).withAlpha (0.25f + r.nextFloat() * 0.55f));
+        g.fillEllipse (x, y, sz, sz * (0.6f + r.nextFloat()));
+    }
+    for (int i = 0; i < 40; ++i)
+    {
+        const float x = tb.getX() + r.nextFloat() * tb.getWidth(), y = tb.getY() + r.nextFloat() * tb.getHeight();
+        g.setColour (juce::Colour (0xffffb08a).withAlpha (0.12f));
+        g.drawLine (x, y, x + 4.0f + r.nextFloat() * 10.0f, y + r.nextFloat() * 2.0f, 0.8f);
+    }
+    g.restoreState();
+    g.setColour (juce::Colour (0xff1c0503));
+    g.strokePath (titlePath, juce::PathStrokeType (1.4f));
+
+    g.setColour (colours::ash);
+    drawSpaced (g, juce::String ("HORROR SOUND DESIGN  //  V") + JucePlugin_VersionString, Fonts::get().label (12.5f),
+                { (int) titleR.getX() + 2, 80, 330, 16 }, juce::Justification::centredLeft, 0.2f);
+}
+
+void Header::paintPlate (juce::Graphics& g, juce::Rectangle<float> r)
+{
+    paintBezel (g, r);
+    auto in = r.reduced (7.0f);
+    g.setColour (juce::Colour (0xcc120b08));
+    g.fillRoundedRectangle (in, 3.0f);
+
+    // crest: castle under a blood moon in a bronze ring
+    const float cs = in.getHeight() - 6.0f;
+    const auto crest = juce::Rectangle<float> (in.getX() + 6.0f, in.getY() + 3.0f, cs, cs);
+    const auto cc = crest.getCentre();
+    const float cr = cs * 0.5f;
+    juce::ColourGradient bz (juce::Colour (0xff8e6b4c), crest.getX(), crest.getY(), juce::Colour (0xff20140e), crest.getRight(), crest.getBottom(), false);
+    g.setGradientFill (bz);
+    g.fillEllipse (crest);
+    const float ir = cr * 0.8f;
+    g.saveState();
+    juce::Path disc; disc.addEllipse (cc.x - ir, cc.y - ir, ir * 2, ir * 2);
+    g.reduceClipRegion (disc);
+    g.setColour (juce::Colour (0xff120706));
+    g.fillEllipse (cc.x - ir, cc.y - ir, ir * 2, ir * 2);
+    juce::ColourGradient moon (juce::Colour (0xfff3794a), cc.x - ir * 0.1f, cc.y - ir * 0.35f, juce::Colour (0xff7a160c), cc.x + ir * 0.6f, cc.y, true);
+    moon.addColour (0.55, juce::Colour (0xffd0391f));
+    g.setGradientFill (moon);
+    const float mr = ir * 0.62f;
+    g.fillEllipse (cc.x - mr, cc.y - ir * 0.25f - mr, mr * 2, mr * 2);
+    // castle silhouette
+    const float u = ir / 30.0f, base = cc.y + ir;
+    auto T = [&] (float x, float y) { return juce::Point<float> (cc.x + (x - 50.0f) * u, base + (y - 100.0f) * u); };
+    juce::Path castle;
+    auto tower = [&] (float x0, float x1, float top, int merlons)
+    {
+        castle.startNewSubPath (T (x0, 100)); castle.lineTo (T (x0, top));
+        const float w = (x1 - x0) / (float) (merlons * 2 - 1);
+        for (int m = 0; m < merlons * 2 - 1; ++m)
+        {
+            const float xa = x0 + (float) m * w, xb = xa + w;
+            if (m % 2 == 0) { castle.lineTo (T (xa, top - 4)); castle.lineTo (T (xb, top - 4)); castle.lineTo (T (xb, top)); }
+            else castle.lineTo (T (xb, top));
+        }
+        castle.lineTo (T (x1, 100)); castle.closeSubPath();
+    };
+    tower (20, 35, 64, 3); tower (32, 68, 48, 5); tower (62, 77, 62, 3);
+    g.setColour (juce::Colour (0xff050303));
+    g.fillPath (castle);
+    g.setColour (juce::Colour (0xffffa24a));
+    for (auto w : { juce::Point<float> (48.5f, 58), juce::Point<float> (39.5f, 70), juce::Point<float> (59.5f, 70) })
+    {
+        const auto p = T (w.x, w.y);
+        g.fillRect (p.x, p.y, 2.0f * u, 3.6f * u);
+    }
+    g.restoreState();
+    g.setColour (juce::Colour (0xff120b08));
+    g.drawEllipse (crest.reduced (0.5f), 1.0f);
+
+    auto txt = in.withTrimmedLeft (cs + 14.0f).toNearestInt();
+    g.setColour (colours::bone);
+    drawSpaced (g, "CASTLE DANGER", Fonts::get().title (21.0f), txt.withHeight (26).withY (txt.getY() + 6), juce::Justification::centredLeft, 0.05f);
+    g.setColour (juce::Colour (0xffd9772f));
+    drawSpaced (g, "MUSIC COMPANY", Fonts::get().label (15.0f), txt.withHeight (18).withY (txt.getY() + 32), juce::Justification::centredLeft, 0.22f);
+    g.setColour (colours::ash);
+    drawSpaced (g, "WE MAKE MUSIC", Fonts::get().label (10.0f), txt.withHeight (12).withY (txt.getY() + 50), juce::Justification::centredLeft, 0.3f);
+}
+
+void Header::paint (juce::Graphics& g)
+{
+    paintScreen (g, screenR);
+    paintTitle (g);
+    paintPlate (g, plateR);
+
+    g.setColour (colours::ash);
+    drawSpaced (g, "PRESET", Fonts::get().label (13.0f), presetArea().withHeight (16), juce::Justification::centredLeft, 0.25f);
+
+    // hazard stripe
+    const juce::Rectangle<float> hz (0.0f, 102.0f, (float) getWidth(), 8.0f);
+    g.setColour (juce::Colour (0xff140c0a));
+    g.fillRect (hz);
+    g.saveState();
+    g.reduceClipRegion (hz.toNearestInt());
+    g.setColour (juce::Colour (0xff7a1f19));
+    for (float x = -20.0f; x < hz.getRight() + 20.0f; x += 18.0f)
+    {
+        juce::Path st;
+        st.addQuadrilateral (x, hz.getBottom(), x + 9.0f, hz.getBottom(), x + 17.0f, hz.getY(), x + 8.0f, hz.getY());
+        g.fillPath (st);
+    }
+    g.restoreState();
+    g.setColour (juce::Colours::black.withAlpha (0.6f));
+    g.drawHorizontalLine ((int) hz.getY(), 0.0f, (float) getWidth());
+    g.drawHorizontalLine ((int) hz.getBottom(), 0.0f, (float) getWidth());
+}
+
 // ================================================================ editor
 static juce::Image makeTexture (int w, int h)
 {
@@ -428,6 +694,7 @@ HeresyEditor::HeresyEditor (HeresyProcessor& p)
 
     content.setInterceptsMouseClicks (false, true);
     addAndMakeVisible (content);
+    content.addAndMakeVisible (header);
     auto& s = proc.apvts;
 
     // header: presets
@@ -503,9 +770,9 @@ HeresyEditor::HeresyEditor (HeresyProcessor& p)
     refreshPresetList();
 
     setResizable (true, true);
-    setResizeLimits (840, 560, 1800, 1200);
+    setResizeLimits (840, 581, 1800, 1245);
     if (auto* c = getConstrainer()) c->setFixedAspectRatio ((double) baseW / (double) baseH);
-    setSize (1080, 720);
+    setSize (1080, 747);
     startTimerHz (30);
 }
 
@@ -519,22 +786,26 @@ HeresyEditor::~HeresyEditor()
 void HeresyEditor::layoutContent()
 {
     content.setBounds (0, 0, baseW, baseH);
-    prevBtn.setBounds (440, 24, 30, 30);
-    presetBox.setBounds (476, 24, 250, 30);
-    nextBtn.setBounds (732, 24, 30, 30);
-    saveBtn.setBounds (772, 24, 62, 30);
-    deleteBtn.setBounds (840, 24, 68, 30);
-    panicBtn.setBounds (918, 24, 66, 30);
+    header.setBounds (0, 0, baseW, heresy::ui::Header::height);
+    const auto pa = header.presetArea();
+    presetBox.setBounds (pa.getX(), pa.getY() + 20, pa.getWidth(), 28);
+    const int by = pa.getY() + 54, bh = 26;
+    prevBtn.setBounds (pa.getX(), by, 32, bh);
+    nextBtn.setBounds (pa.getX() + 36, by, 32, bh);
+    saveBtn.setBounds (pa.getX() + 72, by, 66, bh);
+    deleteBtn.setBounds (pa.getX() + 142, by, 72, bh);
+    panicBtn.setBounds (pa.getX() + 218, by, 66, bh);
 
-    macroPanel.setBounds (16, 88, 300, 236);
-    for (int i = 0; i < macros.size(); ++i) macros[i]->setBounds (22 + i * 96, 140, 96, 150);
+    const int top = heresy::ui::Header::height + 8;
+    macroPanel.setBounds (16, top, 300, 236);
+    for (int i = 0; i < macros.size(); ++i) macros[i]->setBounds (22 + i * 96, top + 52, 96, 150);
 
-    for (int i = 0; i < pads.size(); ++i) pads[i]->setBounds (328 + i * 289, 88, 277, 236);
+    for (int i = 0; i < pads.size(); ++i) pads[i]->setBounds (328 + i * 289, top, 277, 236);
 
     for (int i = 0; i < sections.size(); ++i)
-        sections[i]->setBounds (16 + (i % 4) * 295, i < 4 ? 336 : 518, 283, 170);
+        sections[i]->setBounds (16 + (i % 4) * 295, i < 4 ? top + 248 : top + 430, 283, 170);
 
-    keyboard.setBounds (16, 700, 1168, 84);
+    keyboard.setBounds (16, top + 612, 1168, 84);
     keyboard.setKeyWidth (1168.0f / 43.0f);
 }
 
@@ -550,22 +821,6 @@ void HeresyEditor::paint (juce::Graphics& g)
     g.addTransform (juce::AffineTransform::scale (scale));
     g.drawImageAt (texture, 0, 0);
 
-    using namespace colours;
-    g.setColour (juce::Colours::black.withAlpha (0.6f));
-    g.setFont (Fonts::get().title (54.0f).withExtraKerningFactor (0.04f));
-    g.drawText ("HERESY", 26, 9, 300, 56, juce::Justification::centredLeft);
-    g.setColour (red);
-    g.drawText ("HERESY", 24, 7, 300, 56, juce::Justification::centredLeft);
-    g.setColour (ash);
-    drawSpaced (g, "HORROR SOUND DESIGN SYNTH", Fonts::get().label (12.5f), { 26, 60, 300, 18 }, juce::Justification::centredLeft, 0.25f);
-
-    g.setColour (bone);
-    drawSpaced (g, "CASTLE DANGER", Fonts::get().title (22.0f), { 990, 18, 194, 26 }, juce::Justification::centredRight, 0.06f);
-    g.setColour (ash);
-    drawSpaced (g, "MUSIC COMPANY", Fonts::get().label (12.5f), { 990, 44, 194, 16 }, juce::Justification::centredRight, 0.3f);
-
-    g.setColour (red.withAlpha (0.35f));
-    g.fillRect (16.0f, 80.0f, 1168.0f, 1.0f);
 }
 
 // ---------------------------------------------------------------- presets UI

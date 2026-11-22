@@ -66,6 +66,13 @@ if(HERESY_PLUGIN)
             juce::juce_recommended_config_flags
             juce::juce_recommended_lto_flags
             juce::juce_recommended_warning_flags)
+
+    # UI snapshot tool (links the plugin's shared code)
+    juce_add_console_app(HeresySnapshot PRODUCT_NAME "HeresySnapshot")
+    target_sources(HeresySnapshot PRIVATE tests/snapshot.cpp)
+    target_include_directories(HeresySnapshot PRIVATE Source)
+    target_compile_definitions(HeresySnapshot PRIVATE JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0)
+    target_link_libraries(HeresySnapshot PRIVATE Heresy)
 endif()
 
 if(HERESY_TESTS)

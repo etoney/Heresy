@@ -71,6 +71,19 @@ jobs:
           INST=$(security find-identity -v -p basic "$KC" | grep "Developer ID Installer" | head -1 | sed 's/.*"\(.*\)".*/\1/')
           echo "APP_IDENTITY=$APP" >> "$GITHUB_ENV"
           echo "INSTALLER_IDENTITY=$INST" >> "$GITHUB_ENV"
+      - name: UI snapshot
+        continue-on-error: true
+        run: |
+          cmake --build build --config Release --target HeresySnapshot -- -quiet
+          BIN=$(find build -type f -name HeresySnapshot -perm -u+x | head -1)
+          mkdir -p snapshots
+          "$BIN" "$PWD/snapshots/heresy-ui.png" 1
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Heresy-ui-snapshot
+          path: snapshots/*.png
+          if-no-files-found: ignore
       - name: Build installer
         run: installer/mac/build_pkg.sh "${{ steps.v.outputs.version }}" build/Heresy_artefacts/Release dist
       - uses: actions/upload-artifact@v4

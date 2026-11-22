@@ -110,6 +110,26 @@ private:
     std::vector<juce::Point<float>> trail;
 };
 
+// Plugin header in the shared Castle Danger layout: screen, dripping title, crest plate, hazard stripe.
+class Header : public juce::Component, private juce::Timer
+{
+public:
+    Header();
+    void paint (juce::Graphics&) override;
+    void resized() override;
+    static constexpr int height = 112;
+    juce::Rectangle<int> presetArea() const { return { 900, 14, 284, 76 }; }
+private:
+    void timerCallback() override;
+    void paintScreen (juce::Graphics&, juce::Rectangle<float>);
+    void paintTitle (juce::Graphics&);
+    void paintPlate (juce::Graphics&, juce::Rectangle<float>);
+    juce::Rectangle<float> screenR { 16, 12, 250, 84 }, titleR { 288, 12, 330, 62 }, plateR { 636, 14, 248, 78 };
+    juce::Path titlePath;
+    std::vector<juce::Path> drips;
+    float phase = 0;
+};
+
 class Panel : public juce::Component
 {
 public:
@@ -140,6 +160,7 @@ private:
     heresy::ui::LookAndFeel lnf;
     juce::Component content;
     juce::Image texture;
+    heresy::ui::Header header;
 
     juce::ComboBox presetBox;
     juce::TextButton prevBtn { "<" }, nextBtn { ">" }, saveBtn { "Save" }, deleteBtn { "Delete" }, panicBtn { "Panic" };
@@ -152,6 +173,6 @@ private:
     juce::OwnedArray<heresy::ui::Section> sections;
     juce::MidiKeyboardComponent keyboard;
 
-    static constexpr int baseW = 1200, baseH = 800;
+    static constexpr int baseW = 1200, baseH = 830;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (HeresyEditor)
 };
