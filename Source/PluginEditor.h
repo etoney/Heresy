@@ -124,7 +124,7 @@ private:
     void paintScreen (juce::Graphics&, juce::Rectangle<float>);
     void paintTitle (juce::Graphics&);
     void paintPlate (juce::Graphics&, juce::Rectangle<float>);
-    juce::Rectangle<float> screenR { 16, 12, 250, 84 }, titleR { 288, 12, 330, 62 }, plateR { 636, 14, 248, 78 };
+    juce::Rectangle<float> screenR { 16, 12, 250, 84 }, titleR { 290, 12, 322, 54 }, plateR { 636, 14, 248, 78 };
     juce::Path titlePath;
     std::vector<juce::Path> drips;
     float phase = 0;
@@ -163,7 +163,7 @@ private:
     heresy::ui::Header header;
 
     juce::ComboBox presetBox;
-    juce::TextButton prevBtn { "<" }, nextBtn { ">" }, saveBtn { "Save" }, deleteBtn { "Delete" }, panicBtn { "Panic" };
+    juce::TextButton prevBtn { "<" }, nextBtn { ">" }, saveBtn { "SAVE" }, deleteBtn { "DELETE" }, panicBtn { "PANIC" };
     juce::StringArray userNames;
     int lastPresetVersion = -1;
 

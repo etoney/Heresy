@@ -422,7 +422,7 @@ void Header::resized()
     ga.addLineOfText (Fonts::get().title (100.0f), "HERESY", 0, 0);
     titlePath.clear();
     ga.createPath (titlePath);
-    titlePath.applyTransform (titlePath.getTransformToScaleToFit (titleR, true, juce::Justification::centredLeft));
+    titlePath.applyTransform (titlePath.getTransformToScaleToFit (titleR, false));   // stretched like the other plugin titles
 
     drips.clear();
     juce::Random r (31);
@@ -436,7 +436,7 @@ void Header::resized()
         bool clash = false;
         for (auto& d : drips) if (std::abs (d.getBounds().getCentreX() - x) < 14.0f) clash = true;
         if (clash) continue;
-        const float w = 2.0f + r.nextFloat() * 2.2f, len = 5.0f + r.nextFloat() * r.nextFloat() * 22.0f;
+        const float w = 1.8f + r.nextFloat() * 2.0f, len = 4.0f + r.nextFloat() * r.nextFloat() * 13.0f;
         juce::Path d;
         d.startNewSubPath (x - w, y - 3.0f);
         d.cubicTo (x - w, y + len * 0.5f, x - w * 0.45f, y + len * 0.8f, x - w * 0.45f, y + len);
@@ -444,7 +444,7 @@ void Header::resized()
                          juce::MathConstants<float>::halfPi, false);
         d.cubicTo (x + w * 0.45f, y + len * 0.8f, x + w, y + len * 0.5f, x + w, y - 3.0f);
         d.closeSubPath();
-        d.addEllipse (x - w * 0.5f, y + len + 4.0f + r.nextFloat() * 5.0f, w, w * 1.35f);   // falling drop
+        if (r.nextBool()) d.addEllipse (x - w * 0.45f, y + len + 3.0f + r.nextFloat() * 3.0f, w * 0.9f, w * 1.2f);   // falling drop
         drips.push_back (d);
         ++made;
     }
@@ -552,7 +552,7 @@ void Header::paintTitle (juce::Graphics& g)
 
     g.setColour (colours::ash);
     drawSpaced (g, juce::String ("HORROR SOUND DESIGN  //  V") + JucePlugin_VersionString, Fonts::get().label (12.5f),
-                { (int) titleR.getX() + 2, 80, 330, 16 }, juce::Justification::centredLeft, 0.2f);
+                { (int) titleR.getX() + 2, 83, 330, 16 }, juce::Justification::centredLeft, 0.2f);
 }
 
 void Header::paintPlate (juce::Graphics& g, juce::Rectangle<float> r)
@@ -576,35 +576,39 @@ void Header::paintPlate (juce::Graphics& g, juce::Rectangle<float> r)
     g.reduceClipRegion (disc);
     g.setColour (juce::Colour (0xff120706));
     g.fillEllipse (cc.x - ir, cc.y - ir, ir * 2, ir * 2);
-    juce::ColourGradient moon (juce::Colour (0xfff3794a), cc.x - ir * 0.1f, cc.y - ir * 0.35f, juce::Colour (0xff7a160c), cc.x + ir * 0.6f, cc.y, true);
-    moon.addColour (0.55, juce::Colour (0xffd0391f));
-    g.setGradientFill (moon);
-    const float mr = ir * 0.62f;
-    g.fillEllipse (cc.x - mr, cc.y - ir * 0.25f - mr, mr * 2, mr * 2);
-    // castle silhouette
-    const float u = ir / 30.0f, base = cc.y + ir;
-    auto T = [&] (float x, float y) { return juce::Point<float> (cc.x + (x - 50.0f) * u, base + (y - 100.0f) * u); };
+    const float u = ir / 38.0f;
+    auto T = [&] (float x, float y) { return juce::Point<float> (cc.x + (x - 50.0f) * u, cc.y + (y - 50.0f) * u); };
+    auto K = [&] (float x, float y) { return T (50.0f + (x - 50.0f) * 1.1f, 96.0f + (y - 96.0f) * 1.1f); };   // castle scale
+    {
+        const auto mc = T (52, 42);
+        const float mr = 28.0f * u;
+        juce::ColourGradient moon (juce::Colour (0xfff3794a), mc.x - mr * 0.1f, mc.y - mr * 0.25f, juce::Colour (0xff7a160c), mc.x + mr, mc.y, true);
+        moon.addColour (0.55, juce::Colour (0xffd0391f));
+        g.setGradientFill (moon);
+        g.fillEllipse (mc.x - mr, mc.y - mr, mr * 2, mr * 2);
+    }
     juce::Path castle;
     auto tower = [&] (float x0, float x1, float top, int merlons)
     {
-        castle.startNewSubPath (T (x0, 100)); castle.lineTo (T (x0, top));
+        castle.startNewSubPath (K (x0, 102)); castle.lineTo (K (x0, top));
         const float w = (x1 - x0) / (float) (merlons * 2 - 1);
         for (int m = 0; m < merlons * 2 - 1; ++m)
         {
             const float xa = x0 + (float) m * w, xb = xa + w;
-            if (m % 2 == 0) { castle.lineTo (T (xa, top - 4)); castle.lineTo (T (xb, top - 4)); castle.lineTo (T (xb, top)); }
-            else castle.lineTo (T (xb, top));
+            if (m % 2 == 0) { castle.lineTo (K (xa, top - 4)); castle.lineTo (K (xb, top - 4)); castle.lineTo (K (xb, top)); }
+            else castle.lineTo (K (xb, top));
         }
-        castle.lineTo (T (x1, 100)); castle.closeSubPath();
+        castle.lineTo (K (x1, 102)); castle.closeSubPath();
     };
     tower (20, 35, 64, 3); tower (32, 68, 48, 5); tower (62, 77, 62, 3);
     g.setColour (juce::Colour (0xff050303));
     g.fillPath (castle);
     g.setColour (juce::Colour (0xffffa24a));
-    for (auto w : { juce::Point<float> (48.5f, 58), juce::Point<float> (39.5f, 70), juce::Point<float> (59.5f, 70) })
+    for (auto w : { juce::Point<float> (47.6f, 58), juce::Point<float> (38.5f, 70), juce::Point<float> (58.5f, 70),
+                    juce::Point<float> (25.0f, 76), juce::Point<float> (72.0f, 76) })
     {
-        const auto p = T (w.x, w.y);
-        g.fillRect (p.x, p.y, 2.0f * u, 3.6f * u);
+        const auto p = K (w.x, w.y);
+        g.fillRect (p.x, p.y, 2.2f * u * 1.1f, 3.8f * u * 1.1f);
     }
     g.restoreState();
     g.setColour (juce::Colour (0xff120b08));
