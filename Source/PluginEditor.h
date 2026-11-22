@@ -11,6 +11,7 @@ struct Fonts
     juce::Font title (float h) const;
     juce::Font label (float h) const;
     juce::Font mono (float h) const;
+    juce::Font sans (float h, bool bold) const;
 };
 
 namespace colours
@@ -173,6 +174,6 @@ private:
     juce::OwnedArray<heresy::ui::Section> sections;
     juce::MidiKeyboardComponent keyboard;
 
-    static constexpr int baseW = 1200, baseH = 830;
+    static constexpr int baseW = 1200, baseH = 862;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (HeresyEditor)
 };
