@@ -639,7 +639,7 @@ void Header::paintTitle (juce::Graphics& g)
     g.strokePath (titlePath, juce::PathStrokeType (1.4f));
 
     g.setColour (colours::ash);
-    drawSpaced (g, juce::String ("HORROR SOUND DESIGN  //  V") + JucePlugin_VersionString, Fonts::get().sans (11.0f, true),
+    drawSpaced (g, juce::String ("HORROR SOUND STUDIO  //  V") + JucePlugin_VersionString, Fonts::get().sans (11.0f, true),
                 { (int) titleR.getX() + 2, 83, 330, 16 }, juce::Justification::centredLeft, 0.2f);
 }
 
